@@ -12,11 +12,23 @@ const DELETE_PRODUCT_MUTATION = gql`
   }
 `;
 
+// Evicts deleted product from cache
+function updateProductCache(cache, payload) {
+  console.log(payload);
+  console.log('Running the update function after Delete');
+  // Find item in cache
+  const productInCache = cache.identify(payload.data.deleteProduct);
+  cache.evict(productInCache);
+}
+
 export default function DeleteProduct({ id, children }) {
   const [deleteProduct, { loading, error }] = useMutation(
     DELETE_PRODUCT_MUTATION,
     {
       variables: { id },
+
+      // update the cache after item is deleted
+      update: updateProductCache,
     }
   );
   return (
