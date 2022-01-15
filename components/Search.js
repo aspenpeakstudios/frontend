@@ -1,9 +1,9 @@
-/* eslint-disable react/jsx-props-no-spreading */
 import { useLazyQuery } from '@apollo/client';
-// import { resetIdCounter, useCombobox } from 'downshift';
+import { resetIdCounter, useCombobox } from 'downshift';
 import gql from 'graphql-tag';
-// import debounce from 'lodash.debounce';
-import { SearchStyles, DropDown, DropDownItem } from './styles/DropDown';
+import debounce from 'lodash.debounce';
+import { useRouter } from 'next/dist/client/router';
+import { DropDown, DropDownItem, SearchStyles } from './styles/DropDown';
 
 const SEARCH_PRODUCTS_QUERY = gql`
   query SEARCH_PRODUCTS_QUERY($searchTerm: String!) {
@@ -26,68 +26,74 @@ const SEARCH_PRODUCTS_QUERY = gql`
   }
 `;
 
-// export default function Search() {
-//   return (
-//     <div>
-//       <p>Search</p>
-//     </div>
-//   );
-// }
-
 export default function Search() {
+  const router = useRouter();
   const [findItems, { loading, data, error }] = useLazyQuery(
     SEARCH_PRODUCTS_QUERY,
     {
       fetchPolicy: 'no-cache',
     }
   );
-  console.log('Data: ', data);
-
-  // Make sure we only make a network call after user has stopped typing
-  // const findItemsButChill = debounce(findItems, 350);
-
-  // Fixes any server side rendering issues with Downshift.
-  // resetIdCounter();
-
-  // 3rd party package - Downshift for dropdown menu
-  // const { inputValue, getMenuProps, getInputProps, getComboboxProps } =
-  //   useCombobox({
-  //     items: [],
-  //     onInputValueChange() {
-  //       console.log('input changed');
-  //       findItems();
-  //       // findItemsButChill({
-  //       //   variables: {
-  //       //     searchTerm: inputValue,
-  //       //   },
-  //       // });
-  //     },
-  //     onSelectedItemChange() {
-  //       console.log('Selected Item Change');
-  //     },
-  //   });
+  console.log({ loading, data, error });
+  const items = data?.searchTerms || [];
+  const findItemsButChill = findItems; // debounce(findItems, 350);
+  resetIdCounter();
+  const {
+    isOpen,
+    inputValue,
+    getMenuProps,
+    getInputProps,
+    getComboboxProps,
+    getItemProps,
+    highlightedIndex,
+  } = useCombobox({
+    items,
+    onInputValueChange() {
+      findItemsButChill({
+        variables: {
+          searchTerm: inputValue,
+        },
+      });
+    },
+    onSelectedItemChange({ selectedItem }) {
+      router.push({
+        pathname: `/product/${selectedItem.id}`,
+      });
+    },
+    itemToString: (item) => item?.name || '',
+  });
   return (
-    // <SearchStyles>
-    //   <div {...getComboboxProps()}>
-    //     <input
-    //       {...getInputProps({
-    //         type: 'search',
-    //         placeholder: 'Search for an item',
-    //         id: 'search',
-    //         className: 'loading',
-    //       })}
-    //     />
-    //   </div>
-    //   <DropDown {...getMenuProps()}>
-    //     {/* <DropDownItem>Item 1</DropDownItem>
-    //     <DropDownItem>Item 2</DropDownItem>
-    //     <DropDownItem>Item 3</DropDownItem>
-    //     <DropDownItem>Item 4</DropDownItem> */}
-    //   </DropDown>
-    // </SearchStyles>
-
-    <div>
-      <p>Search</p>
-    </div>
+    <SearchStyles>
+      <div {...getComboboxProps()}>
+        <input
+          {...getInputProps({
+            type: 'search',
+            placeholder: 'Search for an Item',
+            id: 'search',
+            className: loading ? 'loading' : null,
+          })}
+        />
+      </div>
+      <DropDown {...getMenuProps()}>
+        {isOpen &&
+          items.map((item, index) => (
+            <DropDownItem
+              {...getItemProps({ item, index })}
+              key={item.id}
+              highlighted={index === highlightedIndex}
+            >
+              <img
+                src={item.photo.image.publicUrlTransformed}
+                alt={item.name}
+                width="50"
+              />
+              {item.name}
+            </DropDownItem>
+          ))}
+        {isOpen && !items.length && !loading && (
+          <DropDownItem>Sorry, No items found for {inputValue}</DropDownItem>
+        )}
+      </DropDown>
+    </SearchStyles>
   );
 }
