@@ -2,12 +2,27 @@
 import styled from 'styled-components';
 import { useUser } from './User';
 import CartStyles from './styles/CartStyles';
+import CloseButton from './styles/CloseButton';
 import SupremeStyles from './styles/Supreme';
 import formatMoney from '../lib/formatMoney';
 import calcTotalPrice from '../lib/calcTotalPrice';
+import { useCart } from '../lib/cartState';
+import DeleteCartItem from './DeleteCartItem';
 
 const CartItemListStyles = styled.ul`
   overflow: auto !important;
+`;
+
+const CalculationStyles = styled.p`
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  em {
+    ext-align: left;
+    color: gray;
+    font-family: sans-serif;
+    letter-spacing: 2px;
+  }
 `;
 
 const CartItemStyles = styled.li`
@@ -28,18 +43,18 @@ const CartItemStyles = styled.li`
 function CartItem({ cartItem }) {
   const { product } = cartItem;
   if (!product) return null;
-  console.log(product);
   return (
     <CartItemStyles>
       <img src={product.photo.image.publicUrlTransformed} alt={product.name} />
       <div>
         <h3>{product.name}</h3>
-        <p>
-          {formatMoney(product.price * cartItem.quantity)}=
+        <CalculationStyles>
           <em>
             [{cartItem.quantity} &times; {formatMoney(product.price)} each]
           </em>
-        </p>
+          <span>{formatMoney(product.price * cartItem.quantity)}</span>
+          <DeleteCartItem id={cartItem.id} />
+        </CalculationStyles>
       </div>
     </CartItemStyles>
   );
@@ -47,19 +62,25 @@ function CartItem({ cartItem }) {
 
 export default function Cart() {
   const me = useUser();
+  const { cartOpen, closeCart } = useCart();
+
   if (!me) return <p> Please log in to view Cart. </p>;
-  console.log('User: ', me);
+
   return (
-    <CartStyles open>
+    <CartStyles open={cartOpen}>
       <header>
         <SupremeStyles>{me.name}'s Cart</SupremeStyles>
+        <CloseButton type="button" onClick={closeCart}>
+          &times;
+        </CloseButton>
       </header>
+
       <CartItemListStyles>
         {me.cart.map((cartItem) => (
           <CartItem key={cartItem.id} cartItem={cartItem} />
         ))}
       </CartItemListStyles>
-      {/* TOTAL VALUE */}
+
       <footer>
         <p>{formatMoney(calcTotalPrice(me.cart))}</p>
       </footer>
